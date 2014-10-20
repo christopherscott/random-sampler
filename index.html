@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tastemade Video Exploration Game</title>
+  <link href='http://fonts.googleapis.com/css?family=Roboto:500,100,300,700,500italic,400' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="sprites/css-sprite/sprite-av-white.css">
+  <link rel="stylesheet" href="css/nprogress.css"/>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div id="bgimage"></div>
+  <div id="game">
+    <header>
+      <h1 id="logo" class="logo"><img src="images/tm-script-logo-light.png" alt="Tastemade" /></h1>
+      <h2 class="score">Score: <span id="score">0</span></h2>
+    </header>
+    <section class="choices">
+      <ul class="choice-list"></ul>
+    </section>
+
+    <section class="current">
+
+      <!-- thumbnail overlay -->
+      <div class="current-thumb">
+        <!-- play button -->
+        <svg class="current-play" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+            <path d="M-838-2232H562v3600H-838z" fill="none"/>
+            <path d="M16 10v28l22-14z"/>
+            <path d="M0 0h48v48H0z" fill="none"/>
+        </svg>
+
+        <div class="title"></div>
+      </div>
+
+      <!-- current video container -->
+      <div class="current-video-container paused">
+        <section class="current-video-wrapper">
+          <!-- video -->
+          <video class="current-video" src="" id="current-video">
+            HTML5 video not supported. Maybe eat some guacamole?
+          </video>
+        </section>
+      </div>
+    </section>
+
+    <aside id="current-meta" class="current-meta">
+      <div class="current-controls">
+        <div class="play"></div>
+        <div class="pause"></div>
+      </div>
+      <div class="current-skip">
+        <div class="skip">
+          <div class="icon icon-ic_skip_next_white_24dp"></div>
+          <p>Next</p>
+        </div>
+      </div>
+      <div class="meta"></div>
+      <div class="current-map" data-latitude="40.7142" data-longitude="-74.0064"></div>
+    </aside>
+  </div>
+
+  <!-- choice template -->
+  <script type="text/x-template" id="choiceTpl">
+    <div class="choice-thumb" style="background-image: url(<%= thumbnail.url %>)">
+      <h2 class="choice-title"><%= title %></h2>
+    </div>
+
+    <div class="description">
+      <div class="created-at"><%= createdAtRelative %></div>
+      <% if (venue) { %>
+        <div class="location"><%= venue.geoName %></div>
+      <% } %>
+    </div>
+  </script>
+
+  <!-- current video meta template -->
+  <script type="text/x-template" id="currentVideoMetaTpl">
+    <div class="current-video-meta">
+      <p class="creator-name"><%= creator.name %></p>
+      <% if (venue) { %>
+        <p class="location-name"><%= venue.geoName %></p>
+      <% } %>
+      <p class="created-at"><%= createdAtRelative %></p>
+    </div>
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+  <script type="text/javascript" src="js/app.js"></script>
+</body>
+</html>
