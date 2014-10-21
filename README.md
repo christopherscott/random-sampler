@@ -3,6 +3,7 @@
 A (somewhat) random walk through user-generated videos using the Tastemade API (v1)
 
 ### Features:
+- AJAX-driven
 - Backbone application:
   - Models: AppModel, Video, *VideoCollection
   - Views:  Application (main controller), ChoiceView
@@ -21,6 +22,7 @@ A (somewhat) random walk through user-generated videos using the Tastemade API (
 - Stash user meta data: video views, time spent, etc... (localStorage)
 - Fetch more data, offer user more flexibility
 - Add share links (Facebook, Twitter, etc...)
+- FRP refactor: use BaconJS to simplify multiple collection syncs
 
 ## The "choices" screen
 ![The choices screen](https://raw.githubusercontent.com/christopherscott/random-sampler/master/screenshots/choices_wide.png)
