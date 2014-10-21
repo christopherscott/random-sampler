@@ -69,8 +69,8 @@ var AppModel = Backbone.Model.extend({
     if (randomChoice) {
       return randomChoice;
     } else {
+      debugger;
       // try again
-      return this.getRandomChoice(choices);
     }
   }
 

@@ -5,7 +5,7 @@ var NProgress = require('NProgress');
 var ChoiceView = require('./ChoiceView');
 var WatchedVideos = require('./WatchedVideos');
 var transitionend = 'transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd';
-var convert = require('static-maps');
+var convertMaps = require('static-maps');
 
 var VIDEO_CONTROL_DELAY_MS = 1000;
 
@@ -32,18 +32,25 @@ var Application = Backbone.View.extend({
       'transitionToVideo',
       'fadeToVideo',
       'hideChoices',
-      'handleFinishedVideo'
+      'handleFinishedVideo',
+      'handleAppReady'
     );
     this.cacheNodes();
     this.attachEvents();
     this.watchedVideos = new WatchedVideos();
     this.watchedVideos.fetch();
+
+    // progress loader
+    NProgress.configure({
+      showSpinner: false,
+      parent: '.splash-sampler'
+    });
     NProgress.start();
     NProgress.inc();
+
     this.$current.hide();
     this.hideChoices();
     this.$current.show();
-    convert();
   },
   hideChoices: function() {
     this.$choices.removeClass('show');
@@ -55,6 +62,7 @@ var Application = Backbone.View.extend({
     this.$video = this.$('#current-video');
     this.video = this.$video.get(0);
     this.$meta = this.$('#current-meta .meta');
+    this.$currentMeta = this.$('#current-meta');
     this.$videoContainer = this.$('.current-video-container');
     this.$videoWrapper = this.$('.current-video-wrapper');
     this.$choiceList = this.$('.choice-list');
@@ -65,11 +73,12 @@ var Application = Backbone.View.extend({
     this.$currentThumb = this.$('.current-thumb');
     this.$score = this.$('#score');
     this.$map = this.$('.current-map');
+    this.$splash = this.$('.splash');
+    this.$banner = $('.banner');
   },
   attachEvents: function() {
     this.listenTo(this.model, 'change:username', this.updateUsername);
-    this.listenTo(this.model, 'ready', this.showChoices);
-    this.listenTo(this.model, 'ready', NProgress.done.bind(NProgress));
+    this.listenTo(this.model, 'ready', this.handleAppReady);
     this.listenTo(this.model, 'load:bucket', this.handleBucketLoad);
     this.listenTo(this.model, 'change:points', this.updatePoints);
     this.listenTo(this, 'chosen', this.handleChosen);
@@ -78,8 +87,34 @@ var Application = Backbone.View.extend({
     this.$video.on('play', this.handlePlay);
     this.$video.on('ended', this.handleFinishedVideo);
   },
+  handleAppReady: function() {
+    NProgress.done();
+    this.$splash.addClass('dismiss');
+    this.$splash.on(transitionend, function() {
+      this.$splash.hide();
+      this.$el.addClass('initialized');
+      this.showChoices();
+    }.bind(this));
+  } ,
   updatePoints: function() {
     this.$('.points').text(this.model.get('points'));
+  },
+  makeMap: function(latitude, longitude) {
+    var newMap = $('<div data-latitude="' + latitude + '" data-longitude="' +  longitude + '" />');
+    this.$map.html(newMap.addClass('map-todo'));
+    convertMaps({
+      navigationControl: false,
+      mapTypeControl: false,
+      scaleControl: false,
+      draggable: false,
+      mapTypeId: google.maps.MapTypeId.ROADMAP,
+      zoom: 7
+    });
+  },
+  showUI: function() {
+    this.$banner.removeClass('hidden');
+    this.$current.removeClass('hidden');
+    this.$currentMeta.removeClass('hidden');
   },
   showChoices: function () {
     var choices = this.model.getChoices();
@@ -89,6 +124,7 @@ var Application = Backbone.View.extend({
       this.$choices.removeClass('enter');
     }.bind(this)));
     setTimeout(function() {
+      window.scrollTo(0,0);
       this.$choices.addClass('show enter');
     }.bind(this), 10);
   },
@@ -162,25 +198,14 @@ var Application = Backbone.View.extend({
 
     this.chosenVideo = model;
     this.watchedVideos.add(model);
-
-    // update the map
-    if (model.has('coordinate')) {
-      this.$map.attr('data-longitude', model.get('coordinate')[0]);
-      this.$map.attr('data-latitude', model.get('coordinate')[1]);
-    }
-
-    convert();
-
     this.model.set('currentPoints', 0);
     this.video.pause();
     this.$video.prop('src', model.get('video').url);
     this.$video.trigger('pause');
     this.$videoWrapper.removeClass('paused playing');
     this.$videoWrapper.addClass('paused');
-    this.renderMeta(model);
     this.$choices.addClass('fold');
     this.$choices.addClass(['first', 'second', 'third'][data.index]);
-    this.$currentTitle.text(model.get('title'));
     this.chosenIndex = data.index;
     this.$choices.on(transitionend, _.once(this.transitionToVideo));
   },
@@ -193,14 +218,34 @@ var Application = Backbone.View.extend({
       width: $chosenChoice.innerWidth()
     });
     $chosenChoice.addClass('deploy');
-    this.$chosenChoice = $chosenChoice;
     this.$choiceList.addClass('deploy');
+    this.$chosenChoice = $chosenChoice;
     setTimeout(function() {
       $chosenChoice.css({width: window.innerWidth + 'px', height: window.innerHeight + 'px'});
       $chosenChoice.on(transitionend, _.once(this.fadeToVideo));
     }.bind(this), 10);
   },
   fadeToVideo: function() {
+    var model = this.chosenVideo;
+
+    // update with video info
+    this.renderMeta(model);
+    this.$currentTitle.text(model.get('title'));
+
+    // update the map
+    if (model.has('coordinate')) {
+      this.makeMap(model.get('coordinate')[1], model.get('coordinate')[0]);
+    }
+
+    // add thumbnail image
+    this.$currentThumb.css({
+      'backgroundImage': 'url(' + this.chosenVideo.get('thumbnail').url + ')'
+    });
+
+    // show banner, meta, etc...
+    this.showUI();
+
+    // fade to video
     this.$chosenChoice.off();
     this.$choices.addClass('fade-out');
     this.$choices.on(transitionend, _.once(function() {
@@ -208,9 +253,6 @@ var Application = Backbone.View.extend({
       this.$choices.removeClass('show');
       this.$choices.off();
    }.bind(this)));
-    this.$currentThumb.css({
-      'backgroundImage': 'url(' + this.chosenVideo.get('thumbnail').url + ')'
-    });
   },
   renderMeta: function(model) {
     var context = _.extend(model.toJSON(), {
