@@ -3,7 +3,7 @@
 A (somewhat) random walk through user-generated videos using the Tastemade API (v1)
 
 ### Features:
-- AJAX-driven
+- AJAX-driven, powered by Tastemade V1 API
 - Backbone application:
   - Models: AppModel, Video, *VideoCollection
   - Views:  Application (main controller), ChoiceView
