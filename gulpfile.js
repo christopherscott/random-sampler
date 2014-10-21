@@ -22,15 +22,8 @@ gulp.task('styles', function() {
 });
 
 gulp.task('watch', function() {
-
-  gulp.watch('sass/*.scss', ['styles']);
-
   var bundler = watchify(browserify('./src/index.js', watchify.args));
-
-  // Optionally, you can apply transforms
-  // and other configuration options on the
-  // bundler just as you would with browserify
-  // bundler.transform('brfs');
+  gulp.watch('sass/*.scss', ['styles']);
   bundler.on('update', rebundle);
 
   function rebundle() {
