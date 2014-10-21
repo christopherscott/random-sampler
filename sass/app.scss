@@ -16,6 +16,9 @@ $COLOR_DARK_TINT: rgba(0,0,0,0.85);
   box-sizing: border-box;
 }
 
+/**
+ * Mixins
+ */
 @mixin ellipsis {
   white-space: nowrap;
   overflow: hidden;
@@ -39,6 +42,10 @@ $COLOR_DARK_TINT: rgba(0,0,0,0.85);
   }
 }
 
+/**
+ * Common, layout
+ */
+
 html,
 body {
 	font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -50,6 +57,9 @@ body {
   margin: 0;
 }
 
+/**
+ * Splash screen
+ */
 .splash {
   $size: 350px;
   @include abs-center();
@@ -95,16 +105,21 @@ body {
   }
 }
 
-#nprogress .bar {
-  height: 3px;
-}
+/**
+ * Progress bar
+ */
+#nprogress {
+  .bar {
+    height: 3px;
+  }
 
-#nprogress .spinner {
-  display: block;
-  position: absolute;
-  z-index: 1031;
-  bottom: 0;
-  left: 120px;
+  .spinner {
+    display: block;
+    position: absolute;
+    z-index: 1031;
+    bottom: 0;
+    left: 120px;
+  }
 }
 
 #random-sampler {
@@ -113,9 +128,6 @@ body {
   position: absolute;
   z-index: 11;
   perspective: 1600px;
-  &.initialized {
-    // background: none;
-  }
 }
 
 .banner {

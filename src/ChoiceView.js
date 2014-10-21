@@ -24,7 +24,6 @@ var ChoiceView = Backbone.View.extend({
     });
     this.$el.addClass('chosen');
   }
-
 });
 
 module.exports = ChoiceView;

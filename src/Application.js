@@ -10,6 +10,10 @@ var convertMaps = require('static-maps');
 var VIDEO_CONTROL_DELAY_MS = 1000;
 
 var Application = Backbone.View.extend({
+
+  // classes
+  HIDDEN: 'hidden',
+
   currentVideoMetaTpl: _.template($('#currentVideoMetaTpl').html()),
   events: {
     'keyup #username': 'handleUsernameChange',
@@ -26,35 +30,36 @@ var Application = Backbone.View.extend({
       'showChoices',
       'handleBucketLoad',
       'handleTimeUpdate',
-      'updatePoints',
       'handlePlay',
       'handlePause',
       'transitionToVideo',
       'fadeToVideo',
       'hideChoices',
       'handleFinishedVideo',
-      'handleAppReady'
+      'handleAppReady',
+      'enterChoices',
+      'hideChoices',
+      'expandChosen'
     );
     this.cacheNodes();
     this.attachEvents();
     this.watchedVideos = new WatchedVideos();
     this.watchedVideos.fetch();
 
-    // progress loader
+    // initialize progress loader
     NProgress.configure({
       showSpinner: false,
       parent: '.splash-sampler'
     });
     NProgress.start();
     NProgress.inc();
+    this.$choices.hide();
+    this.$choices.show();
+  },
 
-    this.$current.hide();
-    this.hideChoices();
-    this.$current.show();
-  },
-  hideChoices: function() {
-    this.$choices.removeClass('show');
-  },
+  /**
+   * Stash jQuery objects
+   */
   cacheNodes: function() {
     this.$bgimage = $('#bgimage');
     this.$choiceList = this.$('.choice-list');
@@ -76,17 +81,25 @@ var Application = Backbone.View.extend({
     this.$splash = this.$('.splash');
     this.$banner = $('.banner');
   },
+
+  /**
+   * Attach to application/semantic events.
+   */
   attachEvents: function() {
     this.listenTo(this.model, 'change:username', this.updateUsername);
     this.listenTo(this.model, 'ready', this.handleAppReady);
     this.listenTo(this.model, 'load:bucket', this.handleBucketLoad);
-    this.listenTo(this.model, 'change:points', this.updatePoints);
     this.listenTo(this, 'chosen', this.handleChosen);
     this.$video.on('timeupdate', this.handleTimeUpdate);
     this.$video.on('pause', this.handlePause);
     this.$video.on('play', this.handlePlay);
     this.$video.on('ended', this.handleFinishedVideo);
   },
+
+  /**
+   * Fired when the application is 'ready',
+   * usually when the model is 'ready'.
+   */
   handleAppReady: function() {
     NProgress.done();
     this.$splash.addClass('dismiss');
@@ -95,10 +108,16 @@ var Application = Backbone.View.extend({
       this.$el.addClass('initialized');
       this.showChoices();
     }.bind(this));
-  } ,
-  updatePoints: function() {
-    this.$('.points').text(this.model.get('points'));
   },
+
+  /**
+   * Interacts with our 'static-maps' dependency to
+   * inject new markup and convert into maps (usually
+   * when user selects new video).
+   *
+   * @param  {Number|String} latitude
+   * @param  {Number|String} longitude
+   */
   makeMap: function(latitude, longitude) {
     var newMap = $('<div data-latitude="' + latitude + '" data-longitude="' +  longitude + '" />');
     this.$map.html(newMap.addClass('map-todo'));
@@ -111,52 +130,76 @@ var Application = Backbone.View.extend({
       zoom: 7
     });
   },
+
+  /**
+   * Helper method to show framing pieces of UI.
+   */
   showUI: function() {
-    this.$banner.removeClass('hidden');
-    this.$current.removeClass('hidden');
-    this.$currentMeta.removeClass('hidden');
+    this.$banner.removeClass(this.HIDDEN);
+    this.$current.show();
+    this.$current.removeClass(this.HIDDEN);
+    this.$currentMeta.removeClass(this.HIDDEN);
   },
+
+  /**
+   * Present the user with three options to check out.
+   */
   showChoices: function () {
     var choices = this.model.getChoices();
     this.$choiceList.html('');
-    choices.forEach(this.addChoice, this);
+    choices
+      .filter(function(choice) {return !!choice; })
+      .forEach(this.addChoice, this);
     this.$choices.on(transitionend, _.once(function() {
       this.$choices.removeClass('enter');
     }.bind(this)));
-    setTimeout(function() {
-      window.scrollTo(0,0);
-      this.$choices.addClass('show enter');
-    }.bind(this), 10);
+    _.delay(this.enterChoices, 10);
   },
- addChoice: function(choice, i) {
-   var view = new ChoiceView({
-      app: this,
-      model: choice,
-      index: i
-    });
+
+  /**
+   * Trigger initial 'enter' animation.
+   */
+  enterChoices: function() {
+    window.scrollTo(0,0);
+    this.$choices.addClass('show enter');
+  },
+
+  /**
+   * Instantiate a new 'choice' view, attach to DOM
+   * @param {Object} choice - video model
+   * @param {Number} i - index
+   */
+  addChoice: function(choice, i) {
+    var view = new ChoiceView({ app: this, model: choice, index: i });
     this.$choiceList.append(view.render().el);
   },
+
   updateUsername: function(model, value) {
     this.$username.text(value);
   },
+
   handleClickInfo: function() {
     this.$videoContainer.addClass('flipped');
   },
+
   handleClickBackToVideo: function() {
     this.$videoContainer.removeClass('flipped');
   },
+
   handlePause: function() {
     this.$videoContainer.removeClass('paused playing');
     setTimeout(function() {
       this.$videoContainer.addClass('paused');
     }.bind(this), VIDEO_CONTROL_DELAY_MS);
   },
+
   handlePlay: function() {
     this.$videoContainer.removeClass('paused playing');
     setTimeout(function() {
       this.$videoContainer.addClass('playing');
     }.bind(this), VIDEO_CONTROL_DELAY_MS);
   },
+
   handleFinishedVideo: function() {
     this.video.pause();
     this.$currentThumb.show();
@@ -165,13 +208,16 @@ var Application = Backbone.View.extend({
     this.$choiceList.removeClass('deploy');
     this.showChoices();
   },
+
   handleClickPlay: function() {
     this.$currentThumb.hide();
     this.video.play();
   },
+
   handleClickPause: function() {
     this.video.pause();
   },
+
   handleTimeUpdate: function(evt) {
     var duration = this.video.duration;
     if (isNaN(duration)) { return; }
@@ -188,9 +234,11 @@ var Application = Backbone.View.extend({
     this.$score.text(this.model.get('points'));
     this.$currentTime.text(this.pad(seconds) + ':' + this.pad(hundreths) + ':' + thousands);
   },
+
   pad: function(n) {
    return ((n < 10) ? '0' : '') + n;
   },
+
   handleChosen: function (data) {
     var model = data.model,
         chosenChoice,
@@ -209,6 +257,7 @@ var Application = Backbone.View.extend({
     this.chosenIndex = data.index;
     this.$choices.on(transitionend, _.once(this.transitionToVideo));
   },
+
   transitionToVideo: function() {
     this.$choices.off();
     $chosenChoice = this.$choices.find('li:eq(' + this.chosenIndex + ')');
@@ -220,11 +269,15 @@ var Application = Backbone.View.extend({
     $chosenChoice.addClass('deploy');
     this.$choiceList.addClass('deploy');
     this.$chosenChoice = $chosenChoice;
-    setTimeout(function() {
-      $chosenChoice.css({width: window.innerWidth + 'px', height: window.innerHeight + 'px'});
-      $chosenChoice.on(transitionend, _.once(this.fadeToVideo));
-    }.bind(this), 10);
+    _.delay(this.expandChosen, 10);
   },
+
+  expandChosen: function() {
+    var $chosenChoice = this.$chosenChoice;
+    $chosenChoice.css({width: window.innerWidth + 'px', height: window.innerHeight + 'px'});
+    $chosenChoice.on(transitionend, _.once(this.fadeToVideo));
+  },
+
   fadeToVideo: function() {
     var model = this.chosenVideo;
 
@@ -248,22 +301,27 @@ var Application = Backbone.View.extend({
     // fade to video
     this.$chosenChoice.off();
     this.$choices.addClass('fade-out');
-    this.$choices.on(transitionend, _.once(function() {
-      this.$choices.addClass('hidden');
-      this.$choices.removeClass('show');
-      this.$choices.off();
-   }.bind(this)));
+    this.$choices.on(transitionend, _.once(this.hideChoices));
   },
+
+  hideChoices: function() {
+    this.$choices.addClass('hidden');
+    this.$choices.removeClass('show');
+    this.$choices.off();
+  },
+
   renderMeta: function(model) {
     var context = _.extend(model.toJSON(), {
       points: this.model.get('points')
     });
     this.$meta.html(this.currentVideoMetaTpl(context));
   },
+
   handleBucketLoad: function() {
     var numBuckets = this.model.buckets.length;
     NProgress.inc();
   },
+
   handleUsernameChange: function(evt) {
     var currentName = this.model.get('username');
         newName = $(evt.target).val();
